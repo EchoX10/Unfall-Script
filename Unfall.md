@@ -3,16 +3,28 @@ local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
-local rootPart = character:WaitForChild("HumanoidRootPart")
+
+local humanoid
+local rootPart
 
 local unfallAtivo = false
 local plataforma = nil
 local conexao = nil
 
+-- Atualiza personagem (R6 e R15)
+local function atualizarPersonagem(char)
+	character = char
+	humanoid = character:WaitForChild("Humanoid")
+	rootPart = character:WaitForChild("HumanoidRootPart")
+end
+
+atualizarPersonagem(character)
+
 -- GUI
 local screenGui = Instance.new("ScreenGui")
-screenGui.Parent = player:WaitForChild("PlayerGui")
+screenGui.Name = "UnFallGui"
 screenGui.ResetOnSpawn = false
+screenGui.Parent = player:WaitForChild("PlayerGui")
 
 local botao = Instance.new("TextButton")
 botao.Size = UDim2.new(0, 180, 0, 60)
@@ -30,20 +42,20 @@ local dragging = false
 local dragStart
 local startPos
 
-botao.InputBegan:Connect(function(i)
-	if i.UserInputType == Enum.UserInputType.Touch
-	or i.UserInputType == Enum.UserInputType.MouseButton1 then
+botao.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+	or input.UserInputType == Enum.UserInputType.Touch then
 		
 		dragging = true
-		dragStart = i.Position
+		dragStart = input.Position
 		startPos = botao.Position
 	end
 end)
 
-botao.InputChanged:Connect(function(i)
+botao.InputChanged:Connect(function(input)
 	if dragging then
-		local delta = i.Position - dragStart
-		
+		local delta = input.Position - dragStart
+
 		botao.Position = UDim2.new(
 			startPos.X.Scale,
 			startPos.X.Offset + delta.X,
@@ -53,11 +65,24 @@ botao.InputChanged:Connect(function(i)
 	end
 end)
 
-botao.InputEnded:Connect(function()
-	dragging = false
+botao.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+	or input.UserInputType == Enum.UserInputType.Touch then
+		
+		dragging = false
+	end
 end)
 
--- Ativar / desativar
+-- Distância baseada no tipo do rig
+local function pegarOffset()
+	if humanoid.RigType == Enum.HumanoidRigType.R15 then
+		return -3.5
+	else
+		return -3
+	end
+end
+
+-- Liga / desliga
 botao.MouseButton1Click:Connect(function()
 
 	unfallAtivo = not unfallAtivo
@@ -69,24 +94,29 @@ botao.MouseButton1Click:Connect(function()
 
 		-- Criar plataforma
 		plataforma = Instance.new("Part")
+		plataforma.Name = "UnFallPlatform"
 		plataforma.Size = Vector3.new(5, 1, 5)
 		plataforma.Transparency = 1
 		plataforma.Anchored = true
 		plataforma.CanCollide = true
 		plataforma.Parent = workspace
 
-		-- Seguir player
+		-- Atualizar plataforma
 		conexao = RunService.RenderStepped:Connect(function()
 
-			if unfallAtivo
-			and rootPart
+			if not unfallAtivo then
+				return
+			end
+
+			if rootPart
 			and rootPart.Parent
 			and plataforma
 			and plataforma.Parent then
 
-				-- MAIS EMBAIXO pra não empurrar pra cima
+				local offset = pegarOffset()
+
 				plataforma.CFrame =
-					rootPart.CFrame * CFrame.new(0, -3.5, 0)
+					rootPart.CFrame * CFrame.new(0, offset, 0)
 			end
 		end)
 
@@ -95,22 +125,19 @@ botao.MouseButton1Click:Connect(function()
 		botao.Text = "UnFall: OFF"
 		botao.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
 
-		-- Remover plataforma
-		if plataforma then
-			plataforma:Destroy()
-			plataforma = nil
-		end
-
-		-- Desconectar loop
 		if conexao then
 			conexao:Disconnect()
 			conexao = nil
+		end
+
+		if plataforma then
+			plataforma:Destroy()
+			plataforma = nil
 		end
 	end
 end)
 
 -- Respawn
 player.CharacterAdded:Connect(function(newChar)
-	character = newChar
-	rootPart = character:WaitForChild("HumanoidRootPart")
+	atualizarPersonagem(newChar)
 end)
