@@ -58,7 +58,7 @@ botao.MouseButton1Click:Connect(function()
         -- Segue o player no RenderStepped (o mais rápido possível)
         RunService.RenderStepped:Connect(function()
             if unfallAtivo and rootPart and rootPart.Parent and plataforma and plataforma.Parent then
-                plataforma.CFrame = rootPart.CFrame * CFrame.new(0, -1, 0)
+                plataforma.CFrame = rootPart.CFrame * CFrame.new(0, -2.3, 0)
             end
         end)
 
@@ -78,5 +78,3 @@ player.CharacterAdded:Connect(function(newChar)
     character = newChar
     rootPart = character:WaitForChild("HumanoidRootPart")
 end)
-
-print("UnFall INFALÍVEL pronto! Toque no botão azul.")
